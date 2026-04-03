@@ -15,12 +15,6 @@ static connect_func_t real_connect = NULL;
 #define PROXY_USER "zwezabnw"
 #define PROXY_PASS "fo8t7t"
 
-__attribute__((constructor))
-static void init() {
-    real_connect = (connect_func_t)dlsym(RTLD_NEXT, "connect");
-    if (!real_connect) abort();
-}
-
 static void hard_fail() {
     abort();
 }
@@ -74,7 +68,10 @@ static int socks5_handshake(int sock, const struct sockaddr_in *target) {
 }
 
 int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
-    if (!real_connect) hard_fail();
+    if (!real_connect) {
+        real_connect = (connect_func_t)dlsym(RTLD_NEXT, "connect");
+        if (!real_connect) return -1;
+    }
 
     if (addr->sa_family != AF_INET) {
         return real_connect(sockfd, addr, addrlen);
